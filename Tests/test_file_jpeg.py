@@ -643,6 +643,31 @@ class TestFileJpeg:
             assert max(im2.quantization[0]) <= 255
             assert max(im2.quantization[1]) <= 255
 
+    def test_restart_markers(self):
+        im = Image.new("RGB", (32, 32))  # 16 MCUs
+        cases = (
+            (0, 0, 0),
+            (1, 0, 15),
+            (3, 0, 5),
+            (8, 0, 1),
+            (0, 1, 3),
+            (0, 2, 1),
+        )
+        for blocks, rows, markers in cases:
+            out = BytesIO()
+            im.save(
+                out,
+                format="JPEG",
+                restart_marker_blocks=blocks,
+                restart_marker_rows=rows,
+                # force 8x8 pixel MCUs
+                subsampling=0,
+            )
+            found_markers = sum(
+                len(out.getvalue().split(bytes([0xFF, 0xD0 + i]))) - 1 for i in range(8)
+            )
+            assert markers == found_markers
+
     @pytest.mark.skipif(not djpeg_available(), reason="djpeg not available")
     def test_load_djpeg(self):
         with Image.open(TEST_FILE) as img:
