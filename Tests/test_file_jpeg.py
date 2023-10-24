@@ -961,26 +961,29 @@ class TestFileJpeg:
             im.load()
             ImageFile.LOAD_TRUNCATED_IMAGES = False
 
-    def test_separate_tables(self):
+    def test_separate_tables(self, tmp_path):
+        tmpfile = str(tmp_path / "temp.jpg")
+
         im = hopper()
-        tables = BytesIO()
-        image = BytesIO()
-        im.save(tables, format="JPEG", streamtype=1)
-        im.save(image, format="JPEG", streamtype=2)
-        expectations = (
-            (b"\xff\xc0", False, True),  # SOF0
-            (b"\xff\xc4", True, False),  # DHT
-            (b"\xff\xd8", True, True),  # SOI
-            (b"\xff\xd9", True, True),  # EOI
-            (b"\xff\xda", False, True),  # SOS
-            (b"\xff\xdb", True, False),  # DQT
-            (b"\xff\xe0", False, True),  # APP0 (JFIF header)
-        )
-        for marker, in_tables, in_image in expectations:
-            assert (marker in tables.getvalue()) == in_tables
-            assert (marker in image.getvalue()) == in_image
-        with Image.open(BytesIO(tables.getvalue() + image.getvalue())) as im2:
-            assert_image_similar(im, im2, 17)
+        data = []
+        for streamtype in (1, 2):
+            out = BytesIO()
+            im.save(out, format="JPEG", streamtype=streamtype)
+            data.append(out.getvalue())
+
+        # SOI, EOI
+        for marker in (b"\xff\xd8", b"\xff\xd9"):
+            assert marker in data[0] and marker in data[1]
+        # DHT, DQT
+        for marker in (b"\xff\xc4", b"\xff\xdb"):
+            assert marker in data[0] and marker not in data[1]
+        # SOF0, SOS, APP0 (JFIF header)
+        for marker in (b"\xff\xc0", b"\xff\xda", b"\xff\xe0"):
+            assert marker not in data[0] and marker in data[1]
+
+        im.save(tmpfile)
+        with Image.open(BytesIO(b"".join(data))) as combined_im:
+            assert_image_equal_tofile(combined_im, tmpfile)
 
     def test_repr_jpeg(self):
         im = hopper()
