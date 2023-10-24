@@ -979,8 +979,8 @@ class TestFileJpeg:
         for marker, in_tables, in_image in expectations:
             assert (marker in tables.getvalue()) == in_tables
             assert (marker in image.getvalue()) == in_image
-        im2 = Image.open(BytesIO(tables.getvalue() + image.getvalue()))
-        assert_image_similar(im, im2, 17)
+        with Image.open(BytesIO(tables.getvalue() + image.getvalue())) as im2:
+            assert_image_similar(im, im2, 17)
 
     def test_repr_jpeg(self):
         im = hopper()
