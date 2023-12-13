@@ -79,8 +79,8 @@ def raise_oserror(error):
     deprecate(
         "raise_oserror",
         12,
-        action="It is only useful for translating error codes from internal "
-        "Pillow APIs.",
+        action="It is only useful for translating error codes returned by a codec's "
+        "decode() method, which ImageFile already does automatically.",
     )
     raise _get_oserror(error, encoder=False)
 
